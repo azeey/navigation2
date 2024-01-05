@@ -21,18 +21,18 @@ from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
 from launch.actions import (
+    AppendEnvironmentVariable,
     DeclareLaunchArgument,
     ExecuteProcess,
     IncludeLaunchDescription,
-    SetEnvironmentVariable,
-    RegisterEventHandler,
     OpaqueFunction,
+    RegisterEventHandler,
 )
+from launch.conditions import IfCondition
 from launch.event_handlers import OnShutdown
-from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch.substitutions import Command
+
 from launch_ros.actions import Node
 
 
@@ -219,7 +219,7 @@ def generate_launch_description():
         }.items(),
     )
 
-    world_sdf = tempfile.mktemp(prefix="nav2_", suffix=".sdf")
+    world_sdf = tempfile.mktemp(prefix='nav2_', suffix='.sdf')
     world_sdf_xacro = ExecuteProcess(
         cmd=['xacro', '-o', world_sdf, ['headless:=', headless], world])
     gazebo_server = IncludeLaunchDescription(
@@ -234,11 +234,15 @@ def generate_launch_description():
             OpaqueFunction(function=lambda context: os.remove(world_sdf))
         ]))
 
+    set_env_vars_resources = AppendEnvironmentVariable(
+            'GZ_SIM_RESOURCE_PATH',
+            os.path.join(get_package_share_directory('turtlebot3_gazebo'),
+                         'models'))
     gazebo_client = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('ros_gz_sim'),
-                'launch',
-                'gz_sim.launch.py')
+                         'launch',
+                         'gz_sim.launch.py')
         ),
         condition=IfCondition(PythonExpression(
             [use_simulator, ' and not ', headless])),
@@ -283,7 +287,7 @@ def generate_launch_description():
     ld.add_action(declare_robot_sdf_cmd)
     ld.add_action(declare_use_respawn_cmd)
 
-
+    ld.add_action(set_env_vars_resources)
     ld.add_action(world_sdf_xacro)
     ld.add_action(remove_temp_sdf_file)
     ld.add_action(gz_robot)
